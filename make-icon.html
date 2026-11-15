@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>KIKO — Générateur d'icônes</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;
+  background:#0a0d1f;color:#f2e2b8;font-family:system-ui,sans-serif;padding:24px}
+.card{max-width:440px;text-align:center}
+h1{color:#ffc94a;font-size:22px;margin-bottom:8px}
+p{font-size:14px;line-height:1.6;opacity:0.8;margin-bottom:24px}
+button{padding:16px 32px;border:0;border-radius:14px;font-size:16px;font-weight:900;
+  background:linear-gradient(145deg,#ffc94a,#e8a44a);color:#2a1e0a;cursor:pointer;
+  box-shadow:0 5px 0 #7a5218;transition:all 0.15s;font-family:inherit}
+button:active{transform:translateY(3px);box-shadow:0 2px 0 #7a5218}
+button.done{background:linear-gradient(145deg,#75e7a7,#18805c);color:#0a3a20;box-shadow:0 5px 0 #0d5f42}
+.log{text-align:left;margin-top:24px;font-size:13px;background:rgba(255,255,255,0.05);
+  padding:12px;border-radius:10px;font-family:monospace;min-height:80px;max-height:180px;overflow-y:auto}
+.log div{padding:2px 0;opacity:0.7}
+.log div.ok{color:#75e7a7;opacity:1}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Générateur d'icônes KIKO</h1>
+  <p>Clique une fois. Les 4 PNG se téléchargent. Place-les à côté de <code>index.html</code>.</p>
+  <button id="gen">Générer les 4 icônes</button>
+  <div class="log" id="log">En attente…</div>
+</div>
+<script>
+const SVG_SOURCE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+<radialGradient id="bg" cx="50%" cy="30%" r="80%"><stop offset="0%" stop-color="#1a2145"/><stop offset="100%" stop-color="#0a0d1f"/></radialGradient>
+<radialGradient id="halo" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffc94a" stop-opacity="0.35"/><stop offset="100%" stop-color="#ffc94a" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<circle cx="256" cy="220" r="180" fill="url(#halo)"/>
+<circle cx="256" cy="220" r="140" fill="#ffc94a" stroke="#c9962b" stroke-width="6"/>
+<circle cx="256" cy="220" r="120" fill="#8b4b2e" stroke="#572b22" stroke-width="6"/>
+<path d="M156 210 Q150 110 256 92 Q362 110 356 210 Q330 142 256 142 Q182 142 156 210 Z" fill="#171321"/>
+<g fill="#171321"><circle cx="170" cy="130" r="22"/><circle cx="210" cy="108" r="24"/><circle cx="256" cy="100" r="24"/><circle cx="302" cy="108" r="24"/><circle cx="342" cy="130" r="22"/></g>
+<ellipse cx="222" cy="216" rx="17" ry="23" fill="#fff"/><ellipse cx="290" cy="216" rx="17" ry="23" fill="#fff"/>
+<circle cx="225" cy="221" r="9" fill="#171321"/><circle cx="293" cy="221" r="9" fill="#171321"/>
+<path d="M232 262 Q256 286 280 262" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>
+<text x="256" y="470" text-anchor="middle" font-size="52" font-weight="1000" fill="#ffc94a" font-family="system-ui,sans-serif" letter-spacing="6">KIKO</text>
+</svg>`;
+const log = document.getElementById('log');
+function logLine(msg, ok){
+  const div = document.createElement('div');
+  div.textContent = '→ ' + msg;
+  if(ok) div.className = 'ok';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function renderPNG(size, fileName, maskable){
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const padding = maskable ? size * 0.1 : 0;
+    const innerSize = size - padding * 2;
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([SVG_SOURCE], {type: 'image/svg+xml'}));
+    img.onload = () => {
+      if(maskable){
+        ctx.fillStyle = '#0a0d1f';
+        ctx.fillRect(0, 0, size, size);
+      }
+      ctx.drawImage(img, padding, padding, innerSize, innerSize);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        logLine(fileName + ' (' + size + '×' + size + ')', true);
+        resolve();
+      }, 'image/png');
+    };
+    img.src = url;
+  });
+}
+document.getElementById('gen').addEventListener('click', async () => {
+  log.innerHTML = '';
+  const btn = document.getElementById('gen');
+  btn.disabled = true;
+  btn.textContent = 'Génération…';
+  await renderPNG(192, 'icon-192.png');
+  await new Promise(r => setTimeout(r, 300));
+  await renderPNG(512, 'icon-512.png');
+  await new Promise(r => setTimeout(r, 300));
+  await renderPNG(512, 'icon-maskable-512.png', true);
+  await new Promise(r => setTimeout(r, 300));
+  await renderPNG(180, 'apple-touch-icon.png');
+  logLine('Terminé ! 4 fichiers téléchargés.', true);
+  btn.disabled = false;
+  btn.textContent = '✓ Icônes générées';
+  btn.classList.add('done');
+});
+</script>
+</body>
+</html>
